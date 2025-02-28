@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  deployer:
+    build: .
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    env_file:
+      - .env
+
+volumes:
+  node_modules:

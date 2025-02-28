@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Satori Prediction Marketplace</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.16.0/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .usdc-title {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin-bottom: 1px;
+            margin-top: 40px;
+        }
+
+        .usdc-subtitle {
+            font-size: 1em;
+            color: #555;
+        }
+
+        .satori-available {
+            margin-bottom: 20px;
+        }
+
+        .details {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+
+        .details p {
+            display: flex;
+            flex-direction: column;
+            color: #555;
+            align-items: center;
+        }
+
+        .details span {
+            font-weight: bold;
+            font-size: 1.3em;
+            color: #111;
+        }
+
+        .section {
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .transaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .transaction div,
+        .transaction button,
+        .transaction p {
+            flex: 1;
+            text-align: center;
+        }
+
+        .transaction button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .transaction button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .user-usdc {
+            width: 100%;
+        }
+
+        .user-section {
+            display: none;
+        }
+
+        #usdc-amount {
+            width: 50%;
+        }
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse; /* ensures no double borders */
+            table-layout: fixed;       /* optional: makes columns equal width */
+          }
+
+          .detail-table td {
+            text-align: center;
+            padding: 10px;
+            border: none; /* invisible cell walls */
+          }
+    </style>
+</head>
+
+<body>
+    <h2>Satori SAFT</h2>
+    <div class="container">
+        <div class="usdc-title"><span id="usdc-title" style="margin-right: 1rem;">0</span>USDC</div>
+        <!-- <div class="usdc-subtitle">Max Deposit Limit</div> -->
+        <div class="satori-available">
+            <strong><span id="satori-available">0</span></strong><br>SATORI Available
+        </div>
+
+        <!--<div class="latest-block">
+            <h3>Latest Block: <span id="block-number">Loading...</span></h3>
+        </div>-->
+
+        <div class="details">
+            <table class="detail-table">
+              <tr>
+                <td><span id="rate">0</span><br>Price</td>
+                <td><span id="lockup">0</span><br>Lockup</td>
+              </tr>
+              <tr>
+                <td><span id="earning-percentage">0</span><br>Earning Percentage</td>
+                <td><span id="over-collateralization-number">0</span><br>Over Collateralization Number</td>
+              </tr>
+            </table>
+          </div>
+
+        <!-- Connect Wallet Button -->
+        <button id="connect-wallet" onclick="connectWallet()">Connect Wallet</button>
+
+        <div id="not-allowed">Connect your wallet.</div>
+
+        <div id="participate" class="section user-section">
+            <h3>Participate</h3>
+            <p>Add USDC to Contract:</p>
+            <div class="user-usdc"><span id="user-usdc">0</span> USDC available in your wallet</div>
+            <input min="0" type="number" id="usdc-amount" placeholder="Enter USDC amount"
+                oninput="enableSubmitDepositButton()" />
+            <button id="submit-usdc" disabled onclick="submitDeposit()">Deposit</button>
+        </div>
+
+        <div class="section user-section">
+            <h3>Deposits</h3>
+            <div id="transactions"></div>
+            <button id="claim-button" disabled onclick="claimSatori()">Claim All</button>
+        </div>
+
+        <div class="section user-section">
+            <h3>User Info</h3>
+            <div id="user-info"></div>
+        </div>
+
+        <div class="section" id="management-section" style="display: none;">
+            <h3>Admin Dashboard</h3>
+
+            <!-- Add Admin Section -->
+            <div id="admin-section" style="display: none;">
+                <p>Add user:</p>
+                <input type="text" id="new-user" placeholder="Enter new user address"
+                    oninput="enableSubmitAddUserButton()" />
+                <button id="add-user" disabled onclick="submitAddUser()">Add New User</button>
+                <p>Supply Satori:</p>
+                <input type="number" id="satori-amount" placeholder="Enter Satori amount" />
+                <button id="supply-satori" onclick="supplySatori()">Supply Satori</button>
+                <p>Change Lock Period (seconds):</p>
+                <input type="number" id="lock-period" placeholder="e.g. 7776000 for 90 days" />
+                <button onclick="changeLockPeriod()">Update Lock Period</button>
+                <p>Change Collateralization Factor:</p>
+                <input type="number" id="collateral-factor" placeholder="e.g. 100, 200, etc." />
+                <button onclick="changeCollateralizationFactor()">Update Collateral Factor</button>
+                <p>Change Earning Percentage:</p>
+                <input type="number" id="earning-percentage-input" placeholder="e.g. 10 for 10%" />
+                <button onclick="changeEarningPercentage()">Update Earning %</button>
+                <p>Withdraw Funds:</p>
+                <input type="text" id="withdrawAddress" placeholder="e.g. 0x0000000000000000000000000000000000000000" />
+                <button onclick="withdrawFunds()">Withdraw</button>
+                <br /><br />
+            </div>
+
+            <!-- Add Oracle Section -->
+            <div id="oracle-section" style="display: none;">
+                <p>Update SATORI Price:</p>
+                <input type="number" id="new-price" placeholder="Enter new price" />
+                <button id="update-price" onclick="updatePrice()">Update Price</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let web3;
+        let usdcContract;
+        let satoriContract;
+        let fundContract;
+        let userAddress = null;
+        let connectedWallet = false;
+        let latestBlockTimeStamp;
+        const usdcDecimals = 6;
+
+        const USDC_CONTRACT_ADDRESS = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+        const SATORI_CONTRACT_ADDRESS = "0xc1c37473079884CbFCf4905a97de361FEd414B2B";
+        const FUND_CONTRACT_ADDRESS = "0x206CFfECFCa4d2bfc91730a9799119be28703324";
+
+        // ABIs (you must fill these in with the actual ABI JSON for your contracts)
+        const ERC20_CONTRACT_ABI = [
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "spender",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "value",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Approval",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "from",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "to",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "value",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Transfer",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "totalSupply",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    }
+                ],
+                "name": "balanceOf",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "to",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "value",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "transfer",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "spender",
+                        "type": "address"
+                    }
+                ],
+                "name": "allowance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "spender",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "value",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "approve",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "from",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "to",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "value",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "transferFrom",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+        const FUND_CONTRACT_ABI = [
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_oracle",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "_usdc",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "_satori",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_lockPeriod",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_collateralizationFactor",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_earningPercentage",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "inputs": [],
+                "name": "EnforcedPause",
+                "type": "error"
+            },
+            {
+                "inputs": [],
+                "name": "ExpectedPause",
+                "type": "error"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    }
+                ],
+                "name": "AddressAdded",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    }
+                ],
+                "name": "AddressRemoved",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Claimed",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newCollateralizationFactor",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "CollateralizationFactorChanged",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    }
+                ],
+                "name": "ContractPaused",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    }
+                ],
+                "name": "ContractUnpaused",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newEarningPercentage",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "EarningPercentageChanged",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "usdcAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "satoriAmount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "FundsWithdrawn",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newLockPeriod",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "LockPeriodChanged",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "newOracle",
+                        "type": "address"
+                    }
+                ],
+                "name": "OracleChanged",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "newOwner",
+                        "type": "address"
+                    }
+                ],
+                "name": "OwnerChanged",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    }
+                ],
+                "name": "Paused",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newPrice",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "oracle",
+                        "type": "address"
+                    }
+                ],
+                "name": "PriceUpdated",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "from",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "SatoriSupplied",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    }
+                ],
+                "name": "Unpaused",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "UsdcDeposited",
+                "type": "event"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "name": "allowedAddresses",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "availableSatori",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "collateralizationFactor",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "earningPercentage",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "lockPeriod",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "oracle",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "paused",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "satori",
+                "outputs": [
+                    {
+                        "internalType": "contract IERC20WithDecimals",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "satoriDecimals",
+                "outputs": [
+                    {
+                        "internalType": "uint8",
+                        "name": "",
+                        "type": "uint8"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "satoriPrice",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "totalSatori",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "totalUsdc",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "usdc",
+                "outputs": [
+                    {
+                        "internalType": "contract IERC20WithDecimals",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "usdcDecimals",
+                "outputs": [
+                    {
+                        "internalType": "uint8",
+                        "name": "",
+                        "type": "uint8"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "userDeposits",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "claimableTimestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "claimableCollateralizationFactor",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "claimed",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "pause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "unpause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_to",
+                        "type": "address"
+                    }
+                ],
+                "name": "withdrawFunds",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_amountSatori",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "supplySatori",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_newOwner",
+                        "type": "address"
+                    }
+                ],
+                "name": "changeOwner",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_newOracle",
+                        "type": "address"
+                    }
+                ],
+                "name": "changeOracle",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    }
+                ],
+                "name": "addAllowedAddress",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    }
+                ],
+                "name": "removeAllowedAddress",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address[]",
+                        "name": "_users",
+                        "type": "address[]"
+                    }
+                ],
+                "name": "addAllowedAddresses",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address[]",
+                        "name": "_users",
+                        "type": "address[]"
+                    }
+                ],
+                "name": "removeAllowedAddresses",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_newPrice",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "updatePrice",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getPrice",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_newLockPeriod",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "changeLockPeriod",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_newCollateralizationFactor",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "changeCollateralizationFactor",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_newEarningPercentage",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "changeEarningPercentage",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    }
+                ],
+                "name": "getUserDepositCount",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_index",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "getUserDeposit",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "claimableTimestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "claimableCollateralizationFactor",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "claimed",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_amountUsdc",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "depositUsdc",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_amountSatori",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "satoriAsUsdc",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "maxAvailableUsdc",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    }
+                ],
+                "name": "calculateClaimSatoriAmount",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "totalClaimableSatori",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "claimSatori",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "_to",
+                        "type": "address"
+                    }
+                ],
+                "name": "withdrawUSDC",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [
+                    {
+                        "internalType": "uint8",
+                        "name": "",
+                        "type": "uint8"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ]
+
+        function formatNumber(number, decimals = 3) {
+            // Convert to number if it's a string
+            const num = Number(number);
+            if (isNaN(num)) return '0';
+
+            // Check if the number has any decimal places
+            const hasDecimals = num % 1 !== 0;
+
+            // Format with commas and conditionally show decimals
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: hasDecimals ? decimals : 0,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        //function getLatestBlock() {
+        //    web3.eth.getBlock('latest').then((block) => {
+        //        // Display the latest block information in the HTML page
+        //        console.log('Latest Block:', block);
+        //        latestBlockTimeStamp = Number(block.timestamp);
+        //        document.getElementById("block-number").innerHTML = latestBlockTimeStamp;
+        //    });
+        //}
+        // Connect to wallet
+        async function connectWallet() {
+            connectedWallet = false;
+            if (window.ethereum) {
+
+                web3 = new Web3(window.ethereum);
+                try {
+                    //getLatestBlock();
+                    setInterval(() => {
+                        getLatestBlock();
+                    }, 2000);
+                    // Request user accounts
+                    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+                    userAddress = accounts[0];
+                    usdcContract = new web3.eth.Contract(ERC20_CONTRACT_ABI, USDC_CONTRACT_ADDRESS);
+                    satoriContract = new web3.eth.Contract(ERC20_CONTRACT_ABI, SATORI_CONTRACT_ADDRESS);
+                    fundContract = new web3.eth.Contract(FUND_CONTRACT_ABI, FUND_CONTRACT_ADDRESS);
+                    const allowed = await fundContract.methods.allowedAddresses(userAddress).call();
+                    const ownerAddress = await fundContract.methods.owner().call();
+                    const oracleAddress = await fundContract.methods.oracle().call();
+                    if (allowed) {
+                        const userSections = document.getElementsByClassName("user-section");
+                        Array.from(userSections).forEach((item) => {
+                            item.setAttribute("style", "display: block;");
+                        });
+                        document.getElementById("not-allowed").setAttribute("style", "display: none;");
+                    } else if (ownerAddress.toLowerCase() == userAddress.toLowerCase() || oracleAddress.toLowerCase() == userAddress.toLowerCase()) {
+                        document.getElementById("not-allowed").setAttribute("style", "display: none;");
+                    } else {
+                        document.getElementById("not-allowed").innerHTML = "Your account is not allowed.";
+                        document.getElementById("not-allowed").setAttribute("style", "display: block;");
+                    }
+                    console.log(ownerAddress, 'ownerAddress', userAddress)
+                    // Check if connected address is oracle
+                    if (userAddress.toLowerCase() === oracleAddress.toLowerCase()) {
+                        document.getElementById('oracle-section').style.display = 'block';
+                        document.getElementById('management-section').style.display = 'block';
+                    }
+
+                    if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
+                        document.getElementById('admin-section').style.display = 'block';
+                        document.getElementById('management-section').style.display = 'block';
+                    }
+
+                    document.getElementById('connect-wallet').disabled = true;
+                    document.getElementById('connect-wallet').textContent = "Connected: " + shortAddr(userAddress);
+
+                    console.log("Wallet connected:", userAddress);
+
+                    await fetchContractDetails(); // Call contract details once wallet is connected
+                    await fetchUserInfo();
+                    await fetchTransactions(); // real transaction data (deposits)
+
+                    connectedWallet = true;
+
+                } catch (error) {
+                    document.getElementById("not-allowed").innerHTML = "Connect your wallet.";
+                    document.getElementById("not-allowed").setAttribute("style", "display: block;");
+                    console.error("User rejected the request", error);
+                }
+            } else {
+                document.getElementById("not-allowed").innerHTML = "Install EVM wallet.";
+                document.getElementById("not-allowed").setAttribute("style", "display: block;");
+            }
+        }
+
+        // Helper to shorten addresses for UI
+        function shortAddr(addr) {
+            return addr.slice(0, 6) + "..." + addr.slice(-4);
+        }
+
+        function enableSubmitDepositButton() {
+            const amount = document.getElementById("usdc-amount").value;
+            const submitButton = document.getElementById("submit-usdc");
+            submitButton.disabled = !amount || isNaN(amount) || amount <= 0 || !userAddress;
+        }
+
+        function enableSubmitAddUserButton() {
+            const address = document.getElementById("new-user").value;
+            const addUserButton = document.getElementById("add-user");
+            addUserButton.disabled = !address || isNaN(address) || !userAddress;
+        }
+
+        // Fetch contract details
+        async function fetchContractDetails() {
+            try {
+                const price = await fundContract.methods.getPrice().call();
+                const availableSatori = await fundContract.methods.availableSatori().call();
+                const maxAvailableUsdc = await fundContract.methods.maxAvailableUsdc().call();
+                const lockPeriod = await fundContract.methods.lockPeriod().call();
+                const earningPercentage = await fundContract.methods.earningPercentage().call();
+                const overCollateralizationNumber = await fundContract.methods.collateralizationFactor().call();
+
+                console.log(maxAvailableUsdc, 'maxAvailableUsdc', availableSatori)
+
+                // Format the numbers with proper decimals
+                document.getElementById("rate").innerText = formatNumber(web3.utils.fromWei(price, "ether"), 4);
+                document.getElementById("usdc-title").innerText = formatNumber(Number(maxAvailableUsdc) / (10 ** usdcDecimals), 2);
+                document.getElementById("satori-available").innerText = formatNumber(web3.utils.fromWei(availableSatori, "ether"), 2);
+                document.getElementById("lockup").innerText = `${formatNumber(lockPeriod, 0)}s`;
+                document.getElementById("earning-percentage").innerText = formatNumber(web3.utils.fromWei(earningPercentage, "ether"), 2) + '%';
+                document.getElementById("over-collateralization-number").innerText = formatNumber(web3.utils.fromWei(overCollateralizationNumber, "ether"), 2);
+
+                if (document.getElementById("satori-available").innerText == 0) {
+                    document.getElementById("participate").setAttribute("style", "display: none;");
+                }
+            } catch (error) {
+                console.error("Error fetching contract details:", error);
+            }
+        }
+
+        // --- Fetch user info (e.g., deposit count) ---
+        async function fetchUserInfo() {
+            try {
+                if (!userAddress) return;
+                const depositCount = await fundContract.methods.getUserDepositCount(userAddress).call();
+                const userUSDC = await usdcContract.methods.balanceOf(userAddress).call();
+
+                // Format USDC balance
+                document.getElementById("user-usdc").innerText = formatNumber(Number(userUSDC) / (10 ** usdcDecimals), 2);
+                document.getElementById("usdc-amount").setAttribute("max", Number(userUSDC) / (10 ** usdcDecimals));
+                document.getElementById('usdc-amount').addEventListener('input', function () {
+                    const inputUSDCAmount = this.value;
+                    if (inputUSDCAmount > parseFloat(Number(userUSDC) / (10 ** usdcDecimals))) {
+                        this.value = parseFloat(Number(userUSDC) / (10 ** usdcDecimals));
+                    }
+                });
+                const userInfoDiv = document.getElementById("user-info");
+                userInfoDiv.innerHTML = `
+                    <p>Connected as: ${shortAddr(userAddress)}</p>
+                    <p>Total deposits: ${depositCount}</p>
+                `;
+            } catch (error) {
+                console.error("Error fetching user info:", error);
+            }
+        }
+
+        // --- Fetch and display user deposits in the 'transactions' section ---
+        async function fetchTransactions() {
+            if (!userAddress) return;
+
+            const transactionsContainer = document.getElementById("transactions");
+            transactionsContainer.innerHTML = "";
+
+            try {
+                const depositCount = await fundContract.methods.getUserDepositCount(userAddress).call();
+                let anyClaimable = false;
+                // const now = Math.floor(Date.now() / 1000);
+
+                // Store the deposits for later updating
+                const deposits = [];
+
+                for (let i = 0; i < depositCount; i++) {
+                    const deposit = await fundContract.methods.getUserDeposit(userAddress, i).call();
+                    const amount = Number(deposit[0]);
+                    const depositTimestamp = Number(deposit[1]);
+                    const claimableTimestamp = Number(deposit[2]);
+                    const isClaimed = deposit[4];
+
+                    // Evaluate if deposit is claimable
+                    let claimable = (!isClaimed && latestBlockTimeStamp >= claimableTimestamp);
+
+                    let daysLeftStr = "";
+                    const diff = claimableTimestamp - latestBlockTimeStamp;
+
+                    if (diff > 0) {
+                        // Calculate months, days, hours, minutes, and seconds
+                        const totalSeconds = Math.ceil(diff);  // Ensuring we deal with full seconds
+
+                        const months = Math.floor(totalSeconds / (86400 * 30)); // Approx 30 days in a month
+                        const remainingAfterMonths = totalSeconds % (86400 * 30);
+
+                        const days = Math.floor(remainingAfterMonths / 86400); // 1 day = 86400 seconds
+                        const remainingAfterDays = remainingAfterMonths % 86400;
+
+                        const hours = Math.floor(remainingAfterDays / 3600); // 1 hour = 3600 seconds
+                        const remainingAfterHours = remainingAfterDays % 3600;
+
+                        const minutes = Math.floor(remainingAfterHours / 60); // 1 minute = 60 seconds
+                        const seconds = remainingAfterHours % 60;
+
+                        let timeString = '';
+                        if (months > 0) timeString += `${months}m `;
+                        if (days > 0) timeString += `${days}d `;
+                        if (hours > 0) timeString += `${hours}h `;
+                        if (minutes > 0) timeString += `${minutes}m `;
+                        if (seconds > 0 || timeString === '') timeString += `${seconds}s`;
+                        daysLeftStr = timeString;
+                    } else if (!isClaimed) {
+                        daysLeftStr = "Claimable!";
+                    } else {
+                        daysLeftStr = "Claimed";
+                    }
+
+                    if (claimable) anyClaimable = true;
+
+                    // Build deposit row
+                    const txElement = document.createElement("div");
+                    txElement.classList.add("transaction");
+                    txElement.innerHTML = `
+                        <div>
+                            <p><strong>${formatNumber(amount / (10 ** usdcDecimals), 2)}</strong><br>USDC Deposited</p>
+                        </div>
+                        <div>
+                            <p><strong>${new Date(depositTimestamp * 1000).toLocaleDateString()}</strong><br>Deposit Date</p>
+                        </div>
+                        <div>
+                            <p id="daysLeft-${i}"><strong>${daysLeftStr}</strong></p>
+                        </div>
+                    `;
+
+                    transactionsContainer.appendChild(txElement);
+
+                    // Save deposit info for interval updates
+                    deposits.push({
+                        claimableTimestamp,
+                        isClaimed,
+                        elementId: `daysLeft-${i}`,
+                    });
+                }
+
+                // If any deposit is claimable, enable the claim button
+                document.getElementById("claim-button").disabled = !anyClaimable;
+
+                // Update the time remaining every 1 second
+                const interval = setInterval(() => {
+                    // const now = Math.floor(Date.now() / 1000); // Get the current time
+
+                    deposits.forEach((deposit, index) => {
+                        const diff = deposit.claimableTimestamp - latestBlockTimeStamp;
+                        let daysLeftStr = "";
+                        if (diff > 0) {
+                            // Recalculate the time left for each deposit
+                            const totalSeconds = Math.ceil(diff);
+                            const months = Math.floor(totalSeconds / (86400 * 30));
+                            const remainingAfterMonths = totalSeconds % (86400 * 30);
+
+                            const days = Math.floor(remainingAfterMonths / 86400);
+                            const remainingAfterDays = remainingAfterMonths % 86400;
+
+                            const hours = Math.floor(remainingAfterDays / 3600);
+                            const remainingAfterHours = remainingAfterDays % 3600;
+
+                            const minutes = Math.floor(remainingAfterHours / 60);
+                            const seconds = remainingAfterHours % 60;
+
+                            let timeString = '';
+                            if (months > 0) timeString += `${months}m `;
+                            if (days > 0) timeString += `${days}d `;
+                            if (hours > 0) timeString += `${hours}h `;
+                            if (minutes > 0) timeString += `${minutes}m `;
+                            if (seconds > 0 || timeString === '') timeString += `${seconds}s`;
+                            daysLeftStr = timeString;
+                        } else if (!deposit.isClaimed) {
+                            daysLeftStr = "Claimable!";
+                        } else {
+                            daysLeftStr = "Claimed";
+                        }
+
+                        // Update the text content of the respective deposit element
+                        const txElement = document.getElementById(deposit.elementId);
+                        if (txElement) {
+                            txElement.innerHTML = `<strong>${daysLeftStr}</strong>`;
+                        }
+                    });
+                }, 2000); // Update every 1 second
+
+            } catch (error) {
+                console.error("Error fetching transactions (deposits):", error);
+            }
+        }
+
+
+        async function submitDeposit() {
+            const amount = document.getElementById("usdc-amount").value;
+            console.log(`Submitting transaction of ${amount} USDC...`);
+            if (!amount || isNaN(amount) || amount <= 0 || !userAddress) return;
+
+            try {
+                // Approve USDC first
+                // const weiAmount = web3.utils.toWei(amount, "ether"); // caution: real USDC has 6 decimals
+                const weiAmount = amount * (10 ** usdcDecimals);
+
+                await usdcContract.methods
+                    .approve(FUND_CONTRACT_ADDRESS, weiAmount)
+                    .send({ from: userAddress });
+
+                // Then deposit
+                await fundContract.methods
+                    .depositUsdc(weiAmount)
+                    .send({ from: userAddress });
+
+                console.log(`Deposited ${amount} USDC successfully!`);
+                window.location.reload();
+
+            } catch (error) {
+                console.error("Error submitting deposit:", error);
+                alert("Deposit failed: " + error.message);
+            }
+        }
+
+        async function withdrawFunds() {
+            let toAddress = document.getElementById("withdrawAddress").value;
+            toAddress = toAddress == "" ? userAddress : toAddress;
+            try {
+                await fundContract.methods
+                    .withdrawFunds(toAddress)
+                    .send({ from: userAddress })
+            } catch (error) {
+                console.error("Error withdrawing funds:", error);
+                alert("Withdraw failed: " + error.message);
+            }
+        }
+
+        // --- Claim all claimable SATORI ---
+        async function claimSatori() {
+            if (!userAddress) return;
+            try {
+                await fundContract.methods.claimSatori().send({ from: userAddress });
+                alert("Satori claimed successfully!");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error claiming Satori:", error);
+                alert("Claim failed: " + error.message);
+            }
+        }
+
+        // --- Supply Satori (owner only) ---
+        async function supplySatori() {
+            const amount = document.getElementById("satori-amount").value;
+            if (!amount || isNaN(amount) || amount <= 0) return;
+            try {
+                // Approve SATORI tokens
+                // If SATORI is 18 decimals, convert to Wei
+                const weiAmount = web3.utils.toWei(amount, "ether");
+                await satoriContract.methods.approve(FUND_CONTRACT_ADDRESS, weiAmount).send({ from: userAddress });
+                const allowance = await satoriContract.methods.allowance(userAddress, FUND_CONTRACT_ADDRESS).call();
+
+                const balance = await satoriContract.methods.balanceOf(userAddress).call();
+
+                // Then call supplySatori
+                await fundContract.methods.supplySatori(weiAmount).send({ from: userAddress });
+
+                alert("Satori supplied successfully!");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error supplying satori:", error);
+                alert("Supply Satori failed: " + error.message);
+            }
+        }
+
+        // --- Add Allowed User (owner only) ---
+        async function submitAddUser() {
+            const newUserAddress = document.getElementById("new-user").value;
+            if (!newUserAddress) return;
+
+            try {
+                await fundContract.methods.addAllowedAddress(newUserAddress).send({ from: userAddress });
+                alert("User added to allowed list");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error adding allowed user:", error);
+                alert("Add user failed: " + error.message);
+            }
+        }
+
+        // --- Update Price (oracle only) ---
+        async function updatePrice() {
+            const newPrice = document.getElementById("new-price").value;
+            if (!newPrice || isNaN(newPrice) || newPrice <= 0) {
+                alert("Please enter a valid price");
+                return;
+            }
+
+            // For demonstration, if you treat price as an integer (no decimals):
+            try {
+                await fundContract.methods
+                    .updatePrice(web3.utils.toWei(newPrice, "ether"))
+                    .send({ from: userAddress });
+
+                alert("Price updated successfully");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error updating price:", error);
+                alert("Update price failed: " + error.message);
+            }
+        }
+
+        // --- Change Lock Period (owner only) ---
+        async function changeLockPeriod() {
+            const newLock = document.getElementById("lock-period").value;
+            if (!newLock || isNaN(newLock) || newLock <= 0) {
+                alert("Please enter a valid lock period");
+                return;
+            }
+            try {
+                await fundContract.methods
+                    .changeLockPeriod(newLock)
+                    .send({ from: userAddress });
+                alert("Lock period updated!");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error updating lock period:", error);
+                alert("Update lock period failed: " + error.message);
+            }
+        }
+
+        // --- Change Collateralization Factor (owner only) ---
+        async function changeCollateralizationFactor() {
+            const newFactor = document.getElementById("collateral-factor").value;
+            if (!newFactor || isNaN(newFactor) || newFactor <= 0) {
+                alert("Please enter a valid collateralization factor");
+                return;
+            }
+            try {
+                await fundContract.methods
+                    .changeCollateralizationFactor(web3.utils.toWei(newFactor, "ether"))
+                    .send({ from: userAddress });
+                alert("Collateralization factor updated!");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error updating collateralization factor:", error);
+                alert("Update collateral factor failed: " + error.message);
+            }
+        }
+
+        // --- Change Earning Percentage (owner only) ---
+        async function changeEarningPercentage() {
+            const newEarning = document.getElementById("earning-percentage-input").value;
+            console.log(newEarning, 'newEarning')
+            if (!newEarning || isNaN(newEarning) || newEarning <= 0) {
+                alert("Please enter a valid earning percentage");
+                return;
+            }
+            try {
+                await fundContract.methods
+                    .changeEarningPercentage(web3.utils.toWei(newEarning, "ether"))
+                    .send({ from: userAddress });
+                alert("Earning percentage updated!");
+                window.location.reload();
+            } catch (error) {
+                console.error("Error updating earning percentage:", error);
+                alert("Update earning percentage failed: " + error.message);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Enable the Submit button when a valid amount is entered
+            document.getElementById('usdc-amount').addEventListener('input', function () {
+                enableSubmitDepositButton();
+            });
+
+            // Enable the Add User button when a valid address is entered
+            document.getElementById('new-user').addEventListener('input', function () {
+                enableSubmitAddUserButton();
+            })
+
+            connectWallet();
+            fetchTransactions();
+        });
+    </script>
+
+</body>
+
+</html>
